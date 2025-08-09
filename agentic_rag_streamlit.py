@@ -41,7 +41,7 @@ vector_store = SupabaseVectorStore(
 )
  
 # initiating llm
-llm = ChatOpenAI(model="gpt-4o", temperature=0)
+llm = ChatOpenAI(model="gpt-4o",temperature=0)
 
 # pulling prompt from hub
 prompt = hub.pull("hwchase17/openai-functions-agent")
@@ -53,9 +53,7 @@ def retrieve(query: str):
     """Retrieve information related to a query."""
     retrieved_docs = vector_store.similarity_search(query, k=2)
     serialized = "\n\n".join(
-        # Hier das Wort "Quelle" mit grauer, kleiner Schrift und Tooltip mit PDF-Namen:
-        f"Content: {doc.page_content}\n\n"
-        f"<span style='color:gray; font-size:small; cursor:help;' title='{doc.metadata.get('source', 'Unbekannte Quelle')}'>Quelle</span>"
+        (f"Source: {doc.metadata}\n" f"Content: {doc.page_content}")
         for doc in retrieved_docs
     )
     return serialized, retrieved_docs
@@ -70,8 +68,8 @@ agent = create_tool_calling_agent(llm, tools, prompt)
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
 # initiating streamlit app
-st.set_page_config(page_title="Tjark du Nudel", page_icon="🦜")
-st.title("🦜 Tjark du Nudel")
+st.set_page_config(page_title="Agentic RAG Chatbot", page_icon="🦜")
+st.title("🦜 Agentic RAG Chatbot")
 
 # initialize chat history
 if "messages" not in st.session_state:
@@ -84,11 +82,12 @@ for message in st.session_state.messages:
             st.markdown(message.content)
     elif isinstance(message, AIMessage):
         with st.chat_message("assistant"):
-            # Hier das HTML aktivieren, damit Tooltip funktioniert:
-            st.markdown(message.content, unsafe_allow_html=True)
+            st.markdown(message.content)
+
 
 # create the bar where we can type messages
 user_question = st.chat_input("How are you?")
+
 
 # did the user submit a prompt?
 if user_question:
@@ -96,16 +95,18 @@ if user_question:
     # add the message from the user (prompt) to the screen with streamlit
     with st.chat_message("user"):
         st.markdown(user_question)
+
         st.session_state.messages.append(HumanMessage(user_question))
 
+
     # invoking the agent
-    result = agent_executor.invoke({"input": user_question, "chat_history": st.session_state.messages})
+    result = agent_executor.invoke({"input": user_question, "chat_history":st.session_state.messages})
 
     ai_message = result["output"]
 
     # adding the response from the llm to the screen (and chat)
     with st.chat_message("assistant"):
-        st.markdown(ai_message, unsafe_allow_html=True)
-        st.session_state.messages.append(AIMessage(ai_message))
+        st.markdown(ai_message)
 
+        st.session_state.messages.append(AIMessage(ai_message))
 
