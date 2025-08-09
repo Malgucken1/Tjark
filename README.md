@@ -1,0 +1,2 @@
+# Tjark
+Tjarks Lern KI
